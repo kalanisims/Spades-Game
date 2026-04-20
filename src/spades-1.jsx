@@ -61,10 +61,12 @@ function aiChooseCard(hand, trick, spadesBroken, bids, tricks) {
     const nonSpade = hand.filter(c => !isSpade(c));
     playable = (!spadesBroken && nonSpade.length > 0) ? nonSpade : hand;
   }
+  // Try to win if possible
   const winners = playable.filter(c => beatsTrick(trick, c, spadesBroken));
   if (winners.length > 0) {
     return winners.reduce((a, b) => cardVal(a) < cardVal(b) ? a : b);
   }
+  // Dump lowest
   return playable.reduce((a, b) => cardVal(a) < cardVal(b) ? a : b);
 }
 
@@ -135,7 +137,7 @@ function Card({ card, onClick, selected, disabled, small, faceDown }) {
 
 // ─── Main Game ─────────────────────────────────────────────────────────────────
 export default function SpadesGame() {
-  const [phase, setPhase] = useState("menu");
+  const [phase, setPhase] = useState("menu"); // menu|deal|bid|play|roundEnd|gameOver
   const [hands, setHands] = useState([[], [], [], []]);
   const [bids, setBids] = useState([0, 0, 0, 0]);
   const [currentBidder, setCurrentBidder] = useState(0);
@@ -219,6 +221,7 @@ export default function SpadesGame() {
     setSelectedCard(null);
 
     if (newTrick.length === 4) {
+      // Re-evaluate trick winner properly
       let winEntry = newTrick[0];
       for (let i = 1; i < newTrick.length; i++) {
         const isWin = (() => {
@@ -247,6 +250,7 @@ export default function SpadesGame() {
         setTricksWon(newTricksWon);
         setAnimTrick(false);
 
+        // Round is over when ALL players are out of cards
         const roundOver = newHands.every(h => h.length === 0);
         if (roundOver) {
           const finalBids = bids;
@@ -279,11 +283,13 @@ export default function SpadesGame() {
   function handlePlayerCard(card) {
     if (phase !== "play" || currentPlayer !== 0) return;
     if (selectedCard === card) {
+      // Play it
       const led = trick.length > 0 ? trick[0].card.suit : null;
       if (led) {
         const hasSuit = hands[0].some(c => c.suit === led);
         if (hasSuit && card.suit !== led) { setMsg("You must follow suit!"); return; }
       } else {
+        // Leading
         if (isSpade(card) && !spadesBroken) {
           const hasNonSpade = hands[0].some(c => !isSpade(c));
           if (hasNonSpade) { setMsg("Spades not broken yet!"); return; }
@@ -300,6 +306,7 @@ export default function SpadesGame() {
            totalScores[0] <= -200 || totalScores[1] <= -200;
   }
 
+  // ─── RENDER ────────────────────────────────────────────────────────────────
   const green = "#1a4a2e";
   const felt = "radial-gradient(ellipse at center, #1e5c38 0%, #143d26 100%)";
 
@@ -318,14 +325,36 @@ export default function SpadesGame() {
           color:"#8ab89a",fontSize:22,cursor:"pointer",lineHeight:1
         }}>✕</button>
         <h2 style={{fontSize:22,letterSpacing:4,textAlign:"center",marginTop:0,marginBottom:20,color:"#6dda8a"}}>HOW TO PLAY</h2>
+
         {[
-          { icon:"👥", title:"The Setup", body:"4 players — You & Partner (North/South) vs West & East. 13 cards are dealt to each player. Spades (♠) are always trump." },
-          { icon:"🤔", title:"Bidding", body:"Before each round, every player bids how many tricks they expect to win. Count your spades and aces as a guide. You must commit to your bid — there's no passing." },
-          { icon:"🃏", title:"Playing a Trick", body:"The player to the left of the dealer leads first. Tap a card to select it (it lifts up), then tap it again to play. You must follow the suit that was led if you can. If you can't follow suit, you may play any card including a spade." },
-          { icon:"♠", title:"Spades & Trump", body:"Spades cannot be led until they've been 'broken' — meaning someone has already played a spade when they couldn't follow suit. The highest card of the led suit wins the trick, unless a spade is played — then the highest spade wins." },
-          { icon:"🏆", title:"Scoring", body:"Make your bid: earn 10 pts per trick you bid, plus 1 pt per extra trick (called a 'bag'). Miss your bid: lose 10 pts per trick you bid. Nil bid (0): earn 100 pts if you win zero tricks, or lose 100 pts if you win any." },
-          { icon:"👜", title:"Bags & Penalties", body:"Overtricks (bags) are risky! Accumulate 10 bags and your team loses 100 points — and the bag counter resets. Keep an eye on the bag count shown next to your score." },
-          { icon:"🎯", title:"Winning", body:"First team to reach 500 points wins the game. If a team drops to −200 points, they lose immediately. Play as many rounds as it takes!" }
+          {
+            icon:"👥", title:"The Setup",
+            body:"4 players — You & Partner (North/South) vs West & East. 13 cards are dealt to each player. Spades (♠) are always trump."
+          },
+          {
+            icon:"🤔", title:"Bidding",
+            body:"Before each round, every player bids how many tricks they expect to win. Count your spades and aces as a guide. You must commit to your bid — there's no passing."
+          },
+          {
+            icon:"🃏", title:"Playing a Trick",
+            body:"The player to the left of the dealer leads first. Tap a card to select it (it lifts up), then tap it again to play. You must follow the suit that was led if you can. If you can't follow suit, you may play any card including a spade."
+          },
+          {
+            icon:"♠", title:"Spades & Trump",
+            body:"Spades cannot be led until they've been 'broken' — meaning someone has already played a spade when they couldn't follow suit. The highest card of the led suit wins the trick, unless a spade is played — then the highest spade wins."
+          },
+          {
+            icon:"🏆", title:"Scoring",
+            body:"Make your bid: earn 10 pts per trick you bid, plus 1 pt per extra trick (called a 'bag'). Miss your bid: lose 10 pts per trick you bid. Nil bid (0): earn 100 pts if you win zero tricks, or lose 100 pts if you win any."
+          },
+          {
+            icon:"👜", title:"Bags & Penalties",
+            body:"Overtricks (bags) are risky! Accumulate 10 bags and your team loses 100 points — and the bag counter resets. Keep an eye on the bag count shown next to your score."
+          },
+          {
+            icon:"🎯", title:"Winning",
+            body:"First team to reach 500 points wins the game. If a team drops to −200 points, they lose immediately. Play as many rounds as it takes!"
+          }
         ].map(({icon,title,body})=>(
           <div key={title} style={{marginBottom:18,paddingBottom:18,borderBottom:"1px solid #1a4a28"}}>
             <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
@@ -335,6 +364,7 @@ export default function SpadesGame() {
             <p style={{margin:0,fontSize:13,lineHeight:1.7,color:"#c8b89a"}}>{body}</p>
           </div>
         ))}
+
         <button onClick={()=>setShowHelp(false)} style={{
           width:"100%",marginTop:4,background:"linear-gradient(135deg,#2a7a4a,#1a5a34)",
           border:"2px solid #4aaa6a",color:"#e8dfc8",fontSize:15,
@@ -440,6 +470,7 @@ export default function SpadesGame() {
     );
   }
 
+  // ─── Bid Phase ─────────────────────────────────────────────────────────────
   if (phase === "bid") {
     return (
       <div style={{minHeight:"100vh",background:felt,display:"flex",flexDirection:"column",
@@ -451,6 +482,7 @@ export default function SpadesGame() {
             {currentBidder===0?"Your turn to bid":PLAYERS[currentBidder]+" is bidding..."}
           </div>
         </div>
+        {/* Score bar */}
         <div style={{display:"flex",gap:16}}>
           {[0,1].map(t=>(
             <div key={t} style={{background:"#0d2018aa",borderRadius:6,padding:"4px 12px",fontSize:11,textAlign:"center"}}>
@@ -459,6 +491,7 @@ export default function SpadesGame() {
             </div>
           ))}
         </div>
+        {/* Other bids */}
         <div style={{display:"flex",gap:8}}>
           {[1,2,3].map(p=>(
             <div key={p} style={{background:"#0d2018aa",borderRadius:6,padding:"4px 10px",fontSize:11,textAlign:"center",minWidth:60}}>
@@ -467,6 +500,7 @@ export default function SpadesGame() {
             </div>
           ))}
         </div>
+        {/* Player hand */}
         <div style={{width:"100%",overflowX:"auto",padding:"8px 0"}}>
           <div style={{display:"flex",gap:4,justifyContent:"center",flexWrap:"wrap"}}>
             {hands[0].map((c, i) => (
@@ -474,6 +508,7 @@ export default function SpadesGame() {
             ))}
           </div>
         </div>
+        {/* Bid selector */}
         {currentBidder === 0 && (
           <div style={{textAlign:"center"}}>
             <div style={{color:"#8ab89a",fontSize:12,marginBottom:8}}>How many tricks will you take?</div>
@@ -503,6 +538,7 @@ export default function SpadesGame() {
     );
   }
 
+  // ─── Play Phase ────────────────────────────────────────────────────────────
   const bidSummary = [0,1].map(t => ({
     bid: bids[t]+bids[t+2],
     won: tricksWon[t]+tricksWon[t+2]
@@ -513,6 +549,7 @@ export default function SpadesGame() {
       alignItems:"center",justifyContent:"space-between",fontFamily:"'Georgia',serif",
       color:"#e8dfc8",padding:"8px",boxSizing:"border-box",maxWidth:480,margin:"0 auto"}}>
 
+      {/* Top: North (Partner=2) */}
       <div style={{width:"100%",display:"flex",justifyContent:"center",alignItems:"center",gap:4,minHeight:48}}>
         <div style={{textAlign:"center",marginRight:8}}>
           <div style={{fontSize:10,color:"#8ab89a"}}>Partner</div>
@@ -521,6 +558,7 @@ export default function SpadesGame() {
         {hands[2].map((_,i)=><Card key={i} faceDown small />)}
       </div>
 
+      {/* Score + Message */}
       <div style={{width:"100%",display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,padding:"0 4px"}}>
         {[0,1].map(t=>(
           <div key={t} style={{background:"#0d2018aa",borderRadius:6,padding:"4px 8px",fontSize:11,textAlign:"center",flex:1}}>
@@ -532,7 +570,9 @@ export default function SpadesGame() {
         <div style={{flex:2,textAlign:"center",fontSize:12,color:"#c8b89a",padding:"0 4px"}}>{msg}</div>
       </div>
 
+      {/* Middle row: West(1), Trick, East(3) */}
       <div style={{width:"100%",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        {/* West */}
         <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
           <div style={{fontSize:10,color:"#8ab89a"}}>West</div>
           <div style={{fontSize:10,color:"#c8b89a"}}>B{bids[1]} W{tricksWon[1]}</div>
@@ -541,6 +581,7 @@ export default function SpadesGame() {
           ))}
         </div>
 
+        {/* Trick area */}
         <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:4,minHeight:160}}>
           {lastTrick && trick.length===0 && (
             <div style={{fontSize:10,color:"#8ab89a",marginBottom:4}}>Last trick</div>
@@ -548,7 +589,7 @@ export default function SpadesGame() {
           <div style={{position:"relative",width:120,height:120}}>
             {(trick.length>0?trick:lastTrick||[]).map((t,i)=>{
               const positions = [{top:0,left:"50%",transform:"translateX(-50%)"},{top:"50%",left:0,transform:"translateY(-50%)"},{bottom:0,left:"50%",transform:"translateX(-50%)"},{top:"50%",right:0,transform:"translateY(-50%)"}];
-              const posMap = [2,1,0,3];
+              const posMap = [2,1,0,3]; // south=0=bottom, west=1=left, north=2=top, east=3=right
               const pos = positions[posMap[t.player]];
               return (
                 <div key={i} style={{position:"absolute",...pos}}>
@@ -560,6 +601,7 @@ export default function SpadesGame() {
           {spadesBroken && <div style={{fontSize:10,color:"#8ab89a"}}>♠ Spades broken</div>}
         </div>
 
+        {/* East */}
         <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
           <div style={{fontSize:10,color:"#8ab89a"}}>East</div>
           <div style={{fontSize:10,color:"#c8b89a"}}>B{bids[3]} W{tricksWon[3]}</div>
@@ -569,6 +611,7 @@ export default function SpadesGame() {
         </div>
       </div>
 
+      {/* Player hand */}
       <div style={{width:"100%"}}>
         <div style={{fontSize:10,color:"#8ab89a",textAlign:"center",marginBottom:4}}>
           You — Bid {bids[0]} | Won {tricksWon[0]}
