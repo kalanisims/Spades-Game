@@ -1,7 +1,5 @@
-import SpadesGame from './spades-1';
+import SpadesGame from './spades-1.jsx'
 
-function App() {
-  return <SpadesGame />;
+export default function App() {
+  return <SpadesGame />
 }
-
-export default App;
